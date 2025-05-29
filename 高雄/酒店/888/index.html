@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>888商務酒店 - 價格計算器 - 石頭</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+
+    <!-- iOS 相關的 PWA 設定 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="888計算器">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png"> <!-- iOS 主畫面圖示 -->
+
+    <!-- 主題顏色 (部分瀏覽器會使用，應與 manifest.json 中的 theme_color 一致) -->
+    <meta name="theme-color" content="#667eea">
+
+    <style>
+        /* 基本重設與全局設定 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 16px; /* 設定基礎字型大小，方便rem單位計算 */
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            line-height: 1.6;
+            overscroll-behavior-y: contain; /* 防止下拉刷新等行為，更像原生app */
+            -webkit-tap-highlight-color: transparent; /* 移除點擊時的預設高亮效果 */
+        }
+
+        /* 主要容器 */
+        .container {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* 頂部標題區 */
+        .header {
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: clamp(1.8rem, 5vw, 2.2rem);
+            margin-bottom: 0.5rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            opacity: 0.9;
+        }
+
+        /* 表單容器 */
+        .form-container {
+            padding: 1.5rem;
+        }
+
+        /* 表單群組 */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-size: 1rem;
+        }
+        .form-group label small {
+            font-weight: normal;
+            font-size: 0.85em;
+            color: #555;
+        }
+
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 0.75rem 0.9rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+        .form-group input[type="number"]::-webkit-outer-spin-button,
+        .form-group input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .form-group input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        /* 計算按鈕 */
+        .calculate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 0.9rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .calculate-btn:hover, .calculate-btn:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.3);
+        }
+        .calculate-btn:active {
+            transform: translateY(0px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.2);
+        }
+
+        /* 結果容器 */
+        .result-container {
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .result-container h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        /* 結果項目 */
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid #e1e5e9;
+            font-size: 0.95rem;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .grand-total-item {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #667eea;
+        }
+
+        .result-label {
+            color: #555;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .result-value {
+            font-weight: bold;
+            color: #333;
+            text-align: right;
+        }
+
+        /* 價格參考區 */
+        .price-reference {
+            background: #e9ecef;
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+            border-radius: 8px;
+        }
+
+        .price-reference h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .price-table {
+            display: grid;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+        }
+        .price-row span:first-child {
+            color: #495057;
+        }
+        .price-row span:last-child {
+            font-weight: 500;
+            color: #343a40;
+        }
+
+        .note {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 1rem;
+            line-height: 1.5;
+        }
+
+        /* 分隔線 */
+        .section-divider {
+            margin: 1.25rem 0;
+            border-top: 2px solid #667eea;
+            padding-top: 1rem;
+        }
+
+        /* 針對非常小的螢幕進行微調 */
+        @media (max-width: 360px) {
+            html {
+                font-size: 14px;
+            }
+            .header {
+                padding: 1rem;
+            }
+            .form-container, .result-container, .price-reference {
+                padding: 1rem;
+            }
+            .form-group input[type="number"] {
+                padding: 0.65rem 0.8rem;
+            }
+            .calculate-btn {
+                padding: 0.8rem;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>888商務酒店</h1>
+            <p>石頭帥帥價格計算器</p>
+        </div>
+        
+        <div class="form-container">
+            <form id="priceCalculator">
+                <div class="form-group">
+                    <label for="people">1. 預計消費人數？</label>
+                    <input type="number" id="people" min="1" value="1" placeholder="請輸入消費人數" required inputmode="numeric" pattern="[0-9]*">
+                </div>
+
+                <div class="form-group">
+                    <label for="hostess">2. 預計報公關“人”數？<small>（不是報幾個公關數）</small></label>
+                    <input type="number" id="hostess" min="0" value="1" placeholder="請輸入報公關人數" inputmode="numeric" pattern="[0-9]*">
+                </div>
+
+                <div class="form-group">
+                    <label for="lockHostess">3. 預計會鎖幾個公關？</label>
+                    <input type="number" id="lockHostess" min="0" value="0" placeholder="請輸入鎖台公關數量" inputmode="numeric" pattern="[0-9]*">
+                </div>
+
+                <div class="form-group">
+                    <label for="hours">4. 預計坐幾個小時？<small>（最少1小時）</small></label>
+                    <input type="number" id="hours" min="1" value="3" placeholder="請輸入預計時數" required inputmode="numeric" pattern="[0-9]*">
+                </div>
+
+                <button type="button" class="calculate-btn" onclick="calculatePrice()">
+                    估算總金額（僅供試算）
+                </button>
+            </form>
+
+            <div id="result" class="result-container" style="display: none;">
+                <h3>計算結果（參考用）</h3>
+                <div id="resultDetails"></div>
+            </div>
+
+            <div class="price-reference">
+                <h3>價格參考表</h3>
+                <div class="price-table">
+                    <div class="price-row">
+                        <span>人頭費：</span>
+                        <span>每位 $500</span>
+                    </div>
+                    <div class="price-row">
+                        <span>底單（1-5人）：</span>
+                        <span>$3,000</span>
+                    </div>
+                    <div class="price-row">
+                        <span>底單（6-10人）：</span>
+                        <span>$4,000</span>
+                    </div>
+                    <div class="price-row">
+                        <span>底單（11人以上）：</span>
+                        <span>$5,000</span>
+                    </div>
+                    <div class="price-row">
+                        <span>公關費：</span>
+                        <span>每位每小時 $1,800</span>
+                    </div>
+                    <div class="price-row">
+                        <span>公關鎖台加價：</span>
+                        <span>每位每小時 +$900</span>
+                    </div>
+                    <div class="price-row">
+                        <span>無公關加價：</span>
+                        <span>每人每小時 +$300</span>
+                    </div>
+                </div>
+                <p class="note">備註1：底單 = 包廂少爺幹部訪檯事務費等雜支。<br>備註2：人頭費 + 底單費用將平均分攤至每位消費人。</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 註冊 Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js') // 確保 service-worker.js 在同級目錄
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+
+        function calculatePrice() {
+            // 獲取表單數據
+            let people = parseInt(document.getElementById('people').value) || 1;
+            let hostess = parseInt(document.getElementById('hostess').value);
+             if (isNaN(hostess) || hostess < 0) hostess = 0; 
+
+            let lockHostess = parseInt(document.getElementById('lockHostess').value);
+            if (isNaN(lockHostess) || lockHostess < 0) lockHostess = 0;
+
+            let hours = parseInt(document.getElementById('hours').value) || 1;
+
+            // 確保最少值
+            people = Math.max(1, people);
+            hours = Math.max(1, hours);
+
+            // 驗證輸入
+            if (lockHostess > hostess) {
+                alert('鎖台公關數不能超過報公關數！');
+                document.getElementById('lockHostess').focus();
+                return;
+            }
+
+            if (hostess > people) {
+                alert('報公關數不能超過消費人數！');
+                document.getElementById('hostess').focus();
+                return;
+            }
+
+            // 計算各項費用
+            let calculations = {};
+            
+            calculations.headFee = people * 500;
+            
+            if (people >= 1 && people <= 5) {
+                calculations.roomBase = 3000;
+            } else if (people >= 6 && people <= 10) {
+                calculations.roomBase = 4000;
+            } else {
+                calculations.roomBase = 5000;
+            }
+            
+            calculations.baseTotal = calculations.headFee + calculations.roomBase;
+            calculations.basePerPerson = calculations.baseTotal / people;
+            
+            calculations.hostessFee = hostess * 1800 * hours;
+            calculations.lockFee = lockHostess * 900 * hours;
+            
+            let noHostessPeople = people - hostess;
+            calculations.noHostessExtra = noHostessPeople > 0 ? noHostessPeople * 300 * hours : 0;
+            
+            calculations.perPersonWithHostess = 0;
+            if (hostess > 0) {
+                calculations.perPersonWithHostess = (calculations.hostessFee / hostess) + calculations.basePerPerson;
+            }
+            
+            calculations.perPersonLocked = 0;
+            if (lockHostess > 0) {
+                const baseCostForLockedPerson = (calculations.hostessFee / hostess) + calculations.basePerPerson;
+                calculations.perPersonLocked = baseCostForLockedPerson + (calculations.lockFee / lockHostess);
+            }
+            
+            calculations.perPersonNoHostess = 0;
+            if (noHostessPeople > 0) {
+                 calculations.perPersonNoHostess = (calculations.noHostessExtra / noHostessPeople) + calculations.basePerPerson;
+            }
+            
+            calculations.total = calculations.baseTotal + calculations.hostessFee + calculations.lockFee + calculations.noHostessExtra;
+
+            displayResult(calculations, people, hostess, lockHostess, hours);
+        }
+
+        function displayResult(calc, people, hostess, lockHostess, hours) {
+            const resultDiv = document.getElementById('result');
+            const detailsDiv = document.getElementById('resultDetails');
+            
+            let noHostessPeople = people - hostess;
+            
+            let resultHTML = `
+                <div class="result-item">
+                    <span class="result-label">消費人數：</span>
+                    <span class="result-value">${people} 人</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">人頭費 (${people}人 × $500)：</span>
+                    <span class="result-value">$${calc.headFee.toLocaleString()}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">底單：</span>
+                    <span class="result-value">$${calc.roomBase.toLocaleString()}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">底單人頭總計：</span>
+                    <span class="result-value">$${calc.baseTotal.toLocaleString()}</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">底單人頭平均分攤：</span>
+                    <span class="result-value">$${Math.round(calc.basePerPerson).toLocaleString()} / 每人</span>
+                </div>
+                
+                <div class="section-divider"></div>
+            `;
+
+            if (hostess > 0) {
+                resultHTML += `
+                    <div class="result-item">
+                        <span class="result-label">公關費用 (${hostess}位 × ${hours}小時 × $1,800)：</span>
+                        <span class="result-value">$${calc.hostessFee.toLocaleString()}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">每人消費（有報公關）：</span>
+                        <span class="result-value">$${Math.round(calc.perPersonWithHostess).toLocaleString()} / 每人</span>
+                    </div>
+                `;
+            }
+
+            if (lockHostess > 0) {
+                resultHTML += `
+                    <div class="result-item">
+                        <span class="result-label">鎖台費用 (${lockHostess}位 × ${hours}小時 × $900)：</span>
+                        <span class="result-value">$${calc.lockFee.toLocaleString()}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">每人消費（鎖台公關）：</span>
+                        <span class="result-value">$${Math.round(calc.perPersonLocked).toLocaleString()} / 每人</span>
+                    </div>
+                `;
+            }
+
+            if (noHostessPeople > 0) {
+                resultHTML += `
+                    <div class="result-item">
+                        <span class="result-label">沒報公關加價 (${noHostessPeople}人 × ${hours}小時 × $300)：</span>
+                        <span class="result-value">$${calc.noHostessExtra.toLocaleString()}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">每人消費（沒報公關）：</span>
+                        <span class="result-value">$${Math.round(calc.perPersonNoHostess).toLocaleString()} / 每人</span>
+                    </div>
+                `;
+            }
+
+            resultHTML += `
+                <div class="section-divider"></div>
+                <div class="result-item grand-total-item">
+                    <span class="result-label">總計金額：</span>
+                    <span class="result-value">$${calc.total.toLocaleString()}</span>
+                </div>
+            `;
+
+            detailsDiv.innerHTML = resultHTML;
+            resultDiv.style.display = 'block';
+            
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            calculatePrice(); // 預設載入時計算一次
+        });
+    </script>
+</body>
+</html>

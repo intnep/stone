@@ -1,0 +1,24 @@
+{
+  "name": "888商務酒店價格計算器",
+  "short_name": "888計算器",
+  "description": "石頭帥帥的888商務酒店價格試算工具",
+  "start_url": "./index.html", // 或者您HTML檔案的實際名稱和路徑
+  "display": "standalone", // 提供類似原生應用的外觀
+  "background_color": "#764ba2", // 啟動畫面背景色
+  "theme_color": "#667eea", // 瀏覽器工具列顏色
+  "orientation": "portrait-primary", // 預設方向
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png", // 您需要提供這個圖示
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512x512.png", // 您需要提供這個圖示
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
